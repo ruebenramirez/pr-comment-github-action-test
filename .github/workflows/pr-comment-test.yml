@@ -1,0 +1,35 @@
+name: terraform-apply
+
+on:
+  issue_comment:
+    types: [created]
+
+
+jobs:
+  terraform-apply:
+    # Only run for comments starting with "terraform apply" in a pull request.
+    if: >
+      startsWith(github.event.comment.body, 'terraform apply')
+      && startsWith(github.event.issue.pull_request.url, 'https://')
+
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@0.9.0
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `PR comment was successful!`;
+
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
