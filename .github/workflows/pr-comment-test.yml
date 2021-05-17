@@ -17,15 +17,45 @@ jobs:
 
     runs-on: ubuntu-latest
 
+
     steps:
-      - uses: actions/github-script@0.9.0
-        if: github.event_name == 'pull_request'
+      - name: fail
+        run: exit 1
+
+      - name: if fail, create FAIL PR comment
+        uses: actions/github-script@0.9.0
+        if: >
+          failure() &&
+          github.event_name == 'issue_comment'
         env:
-          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `PR comment was successful!`;
+            const job_run__url = `https://github.com/${ process.env.REPO }/actions/runs/${ process.env.RUN_ID }?check_suite_focus=true`
+            const output = `previous steps FAILED!
+              ### job log: <a href="${job_run__url}">${ process.env.RUN_ID }</a>`
+
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: create SUCCESS PR comment
+        uses: actions/github-script@0.9.0
+        if: github.event_name == 'issue_comment'
+        env:
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const job_run__url = `https://github.com/${ process.env.REPO }/actions/runs/${ process.env.RUN_ID }?check_suite_focus=true`
+            const output = `PR comment was successful!
+              ### job log: <a href="${job_run__url}">${ process.env.RUN_ID }</a>`
 
             github.issues.createComment({
               issue_number: context.issue.number,
